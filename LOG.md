@@ -120,3 +120,61 @@ Full table: `results/vetting_by_month.csv`.
 4. Target before stage 2: beat the per-expiry polynomial on held-out quotes and get most
    predictions inside the bid-ask band.
 5. Housekeeping: read the OptionsDX licence terms; decide whether to buy/download 2021-2022.
+
+## 2026-11-11 - Stage 1 underfit: ablation (`stage1_ablation.py`)
+
+**Changes tried**
+- Spread weights: loss weighted by 1 / (bid-ask width)^2, floored at 0.05 vol points.
+- Total-variance output: network outputs w = sigma^2 * T; loss still measured in IV.
+- Time features (`volnn/features.py`): trading-day time / calendar time, FOMC decisions per year
+  before expiry, CPI releases per year before expiry. Event dates were typed in by hand and have
+  not been checked against the Fed and BLS calendars.
+- Bigger network trained longer: 4 x 128, 8,000 epochs (small = 3 x 64, 4,000 epochs).
+
+**Results** - mean over the three days all variants were run on (2023-02-15, 06-21, 10-18).
+RMSE in vol points; inside = % of predictions within bid-ask. Variants A-E and the polynomial were
+also run on three more days (04-19, 08-16, 12-06); six-day means are in
+`results/stage1_ablation_summary.csv` and tell the same story.
+
+| Variant | Held-out quotes RMSE | inside | Held-out expiry RMSE | inside |
+|---|---|---|---|---|
+| Polynomial per expiry | 0.240 | 38% | n/a | n/a |
+| A baseline (small) | 0.249 | 26% | 0.418 | 23% |
+| B small + spread weights | 0.351 | 22% | 0.436 | 21% |
+| C small + weights + total variance | 0.217 | 33% | 0.244 | 31% |
+| D small + weights + time features | 0.522 | 19% | 0.293 | 23% |
+| F big network only | 0.201 | 41% | 0.226 | 34% |
+| G big + spread weights | 0.197 | 42% | 0.191 | 27% |
+| H big + weights + total variance | 0.194 | 47% | 0.230 | 8% |
+| E big + weights + time features | 0.076 | 79% | 0.278 | 12% |
+| I big + weights + total variance + time features | 0.056 | 91% | 0.357 | 11% |
+
+**Reading**
+- The underfit on held-out quotes is fixed, and it took two things together: time features and a
+  bigger network. Either alone does little (F: 0.20; D: worse than baseline).
+- Spread weighting hurt the small network and was roughly neutral for the big one. Total variance
+  helped the small network and was roughly neutral for the big one.
+- The held-out expiry did not improve and got worse with time features. With one day of data there are
+  only ~38 expiries, and the time features nearly identify each one, so the network can learn each
+  expiry's level separately without learning a rule that carries to an unseen expiry. This is
+  overfitting along the maturity axis, invisible in the random-quote holdout.
+- Held-out-expiry numbers are noisy: one expiry per day, and the result moved between runs
+  (2023-02-15: 0.53 and 0.64 for variant I under different thread settings).
+- F-I were run on three days only. Single seed throughout. No hyperparameter search.
+
+**Decision**
+- `stage1_fit_one_day.py` now defaults to variant I. `--baseline` reproduces the original model.
+- Stage 1 is good enough on quotes. The unseen-expiry problem is not a stage 1 tuning problem: it
+  needs constraints across maturity (stage 2) and training on many days so event effects are learned
+  from hundreds of expiries instead of 38 (stage 3).
+
+**Third-party code:** none used. Candidates noted in README (QuantLib, an SVI/SSVI package).
+
+## Where to pick up (replaces the list above)
+
+1. `git pull`, then run `python stage1_fit_one_day.py --date 2023-02-15` locally.
+2. Check the FOMC and CPI dates in `volnn/features.py` against the Fed and BLS calendars.
+3. Stage 2: calendar and butterfly penalties via autograd. Test: does the calendar penalty improve the
+   held-out expiry?
+4. Make the held-out-expiry test less noisy: hold out several expiries per day, several seeds.
+5. Housekeeping: OptionsDX licence terms; 2021-2022 data.
