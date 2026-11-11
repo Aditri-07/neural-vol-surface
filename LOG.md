@@ -183,5 +183,5 @@ also run on three more days (04-19, 08-16, 12-06); six-day means are in
 
 - Results are now kept per iteration under `results/` and never overwritten; the iteration 1 figure
   and metrics were restored from history next to the iteration 2 ones.
-- `CHANGELOG.md` added: one entry per push. Tags `iteration-1` and `iteration-2` mark each state.
-- Convention from here: each push gets a changelog entry, a tag, and its own results folder.
+- `CHANGELOG.md` added: one entry per push. Snapshot branches `iteration-1` and `iteration-2` mark each state (tags could not be pushed from the Claude session).
+- Convention from here: each push gets a changelog entry, a snapshot branch, and its own results folder.

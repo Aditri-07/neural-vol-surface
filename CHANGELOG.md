@@ -1,14 +1,14 @@
 # Changelog
 
 One entry per push to GitHub: what was added, what changed, and what was found. Nothing is deleted
-between iterations. Every earlier state can be opened from its tag (`git checkout iteration-1`), and
+between iterations. Every earlier state is kept as a snapshot branch (`git checkout iteration-1`), and
 each iteration's outputs are kept side by side under `results/`.
 
 For the reasoning behind each decision, see [LOG.md](LOG.md).
 
 ---
 
-## Iteration 2 - Fixing the stage 1 underfit  (tag `iteration-2`, 2026-11-11)
+## Iteration 2 - Fixing the stage 1 underfit  (branch `iteration-2`, 2026-11-11)
 
 **What we worked on:** why the first network lost to a polynomial, and what fixes it.
 
@@ -49,7 +49,7 @@ For the reasoning behind each decision, see [LOG.md](LOG.md).
 - `vet_data.py` crashed with `KeyError: 'month'` when it found no data files. It now stops with a
   message saying where it looked.
 
-## Iteration 1 - Data pipeline and first network  (tag `iteration-1`, 2026-11-11)
+## Iteration 1 - Data pipeline and first network  (branch `iteration-1`, 2026-11-11)
 
 **What we worked on:** choosing the project and data, building and vetting the data pipeline, and a
 first neural fit.
