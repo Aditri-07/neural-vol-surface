@@ -110,6 +110,12 @@ def vet_month(path: str):
 
 def main(folders):
     files = sorted(f for d in folders for f in glob.glob(os.path.join(d, "spx_eod_*.txt")))
+    if not files:
+        raise SystemExit(
+            "No spx_eod_*.txt files found. Expected them at data/spx_2023q1/spx_eod_202301.txt etc.\n"
+            f"Looked in: {list(folders) or 'data/spx_2023q* (no such folders)'}\n"
+            "Folder names are case-sensitive: the folder must be 'data', not 'Data'.\n"
+            "Or pass the folders explicitly: python vet_data.py path/to/q1 path/to/q2 ...")
     rows, all_missing, all_q = [], [], []
     for f in files:
         row, missing, extra, q = vet_month(f)

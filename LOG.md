@@ -100,3 +100,9 @@ Full table: `results/vetting_by_month.csv`.
 - Stale closing quotes on the wings: not tested.
 - AM- vs PM-settled expiries are not distinguished.
 - OptionsDX licence terms: not read.
+
+## 2026-11-11 - First local run
+
+- Repo pushed to GitHub (private). Raw data stays local under `data/`, which Git ignores.
+- `vet_data.py` crashed with `KeyError: 'month'` when it found no data files. It now stops with a
+  message saying where it looked. Cause on the local machine: folder named `Data`, script expects `data`.
