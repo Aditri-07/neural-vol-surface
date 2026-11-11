@@ -1,0 +1,7 @@
+# raw vendor data is not redistributed - download it yourself (see README)
+data/
+*.pkl
+*.7z
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
