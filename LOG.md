@@ -55,7 +55,7 @@ Benchmark: quartic polynomial in k fitted per expiry.
 | Polynomial, train | 0.13 | 52% |
 | Polynomial, held-out quotes | 0.29 | 48% |
 
-Median bid-ask width that day: 0.12 vol points. Figure: `results/stage1_smiles.png`.
+Median bid-ask width that day: 0.12 vol points. Figure: `results/iteration-1-baseline/stage1_smiles.png`.
 
 **Reading**
 - The network underfits: train and held-out errors match but are ~3x the bid-ask width.
@@ -73,7 +73,7 @@ Median bid-ask width that day: 0.12 vol points. Figure: `results/stage1_smiles.p
 ## 2026-11-11 - Full-year vetting (`vet_data.py`)
 
 Loaded Q2-Q4 2023. Totals: 249 trading days, 9,869 expiry slices, 1,234,564 clean quotes.
-Full table: `results/vetting_by_month.csv`.
+Full table: `results/data-vetting/vetting_by_month.csv`.
 
 | Check | Result |
 |---|---|
@@ -106,7 +106,7 @@ Full table: `results/vetting_by_month.csv`.
 - Repo pushed to GitHub (private). Raw data stays local under `data/`, which Git ignores.
 - `vet_data.py` crashed with `KeyError: 'month'` when it found no data files. It now stops with a
   message saying where it looked. Cause on the local machine: folder named `Data`, script expects `data`.
-- Local run of `vet_data.py` on a MacBook reproduced every number in `results/vetting_by_month.csv`.
+- Local run of `vet_data.py` on a MacBook reproduced every number in `results/data-vetting/vetting_by_month.csv`.
   `stage1_fit_one_day.py` not yet run locally.
 
 ## Where to pick up
@@ -134,7 +134,7 @@ Full table: `results/vetting_by_month.csv`.
 **Results** - mean over the three days all variants were run on (2023-02-15, 06-21, 10-18).
 RMSE in vol points; inside = % of predictions within bid-ask. Variants A-E and the polynomial were
 also run on three more days (04-19, 08-16, 12-06); six-day means are in
-`results/stage1_ablation_summary.csv` and tell the same story.
+`results/iteration-2-ablation/stage1_ablation_summary.csv` and tell the same story.
 
 | Variant | Held-out quotes RMSE | inside | Held-out expiry RMSE | inside |
 |---|---|---|---|---|
@@ -178,3 +178,10 @@ also run on three more days (04-19, 08-16, 12-06); six-day means are in
    held-out expiry?
 4. Make the held-out-expiry test less noisy: hold out several expiries per day, several seeds.
 5. Housekeeping: OptionsDX licence terms; 2021-2022 data.
+
+## 2026-11-11 - Repo housekeeping
+
+- Results are now kept per iteration under `results/` and never overwritten; the iteration 1 figure
+  and metrics were restored from history next to the iteration 2 ones.
+- `CHANGELOG.md` added: one entry per push. Tags `iteration-1` and `iteration-2` mark each state.
+- Convention from here: each push gets a changelog entry, a tag, and its own results folder.

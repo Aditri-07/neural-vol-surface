@@ -85,7 +85,7 @@ def main():
     ap.add_argument("--quotes", default="quotes_clean.pkl")
     ap.add_argument("--dates", nargs="*", default=DEFAULT_DATES)
     ap.add_argument("--workers", type=int, default=2)
-    ap.add_argument("--out", default="results/stage1_ablation")
+    ap.add_argument("--out", default="stage1_ablation")
     args = ap.parse_args()
 
     q = pd.read_pickle(args.quotes)

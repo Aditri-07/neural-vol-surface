@@ -6,7 +6,7 @@ are benchmarks, not the subject.
 
 **Status:** data pipeline and vetting done for 2023. Stage 1 now beats the per-expiry polynomial
 benchmark on held-out quotes (about 0.06-0.08 vol points RMSE, roughly 80-90% of predictions inside
-the bid-ask band), but does **not** generalise to an expiry it has never seen. See [LOG.md](LOG.md).
+the bid-ask band), but does **not** generalise to an expiry it has never seen. See [CHANGELOG.md](CHANGELOG.md) for what changed in each push and [LOG.md](LOG.md) for the reasoning.
 
 ## Plan
 1. Fit one day's surface with an MLP - *done for held-out quotes; unseen expiries still fail*
@@ -37,7 +37,8 @@ python stage1_ablation.py            # all model variants on six days; slow (abo
 | `vet_data.py` | Month-by-month data vetting, including static-arbitrage counts |
 | `stage1_fit_one_day.py` | Stage 1 fit of one day with two out-of-sample tests and a benchmark |
 | `stage1_ablation.py` | Grid of model variants across several days |
-| `results/` | Figures and tables produced by the scripts |
+| `results/` | Outputs kept per iteration: `data-vetting/`, `iteration-1-baseline/`, `iteration-2-ablation/` |
+| `CHANGELOG.md` | What changed in each push |
 | `LOG.md` | Dated log of decisions, results and open issues |
 
 ## Third-party code

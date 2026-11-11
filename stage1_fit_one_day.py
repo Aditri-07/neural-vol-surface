@@ -51,7 +51,7 @@ def main():
     ap.add_argument("--date", default="2023-02-15")
     ap.add_argument("--epochs", type=int, default=None)
     ap.add_argument("--baseline", action="store_true", help="original 3 x 64 MLP, unweighted, no time features")
-    ap.add_argument("--out", default="results/stage1")
+    ap.add_argument("--out", default="stage1")
     args = ap.parse_args()
 
     q = prepare(args.data)
