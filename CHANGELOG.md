@@ -8,6 +8,42 @@ For the reasoning behind each decision, see [LOG.md](LOG.md).
 
 ---
 
+## Iteration 3 - No-arbitrage penalties  (branch `iteration-3`, 2026-11-11)
+
+**What we worked on:** stage 2. Adding calendar and butterfly conditions to the loss, and testing
+whether they, or a more structured treatment of events, help on expiries the network has not seen.
+
+**Added**
+- `volnn/surface.py`: total-variance surface models, calendar and butterfly penalties computed with
+  autograd, and a report of how much arbitrage a fitted surface contains.
+- `stage2_arbitrage.py`: five variants on three days, with four held-out expiries per day.
+- `results/iteration-3-arbitrage/`.
+
+**Changed**
+- The unseen-expiry test now holds out four expiries per day instead of one. Stage 1 code is untouched.
+
+**Found** (mean of three days, RMSE in vol points, share inside bid-ask in brackets)
+
+| Variant | Held-out quotes | Held-out expiries | Calendar violations | Butterfly violations |
+|---|---|---|---|---|
+| Free network, no penalty | 0.061 (90%) | 0.097 (52%) | 2.9% | 0% |
+| Free + calendar penalty | 0.066 (87%) | 0.085 (50%) | 0.6% | 0% |
+| Free + calendar + butterfly | 0.064 (90%) | 0.096 (51%) | 0.9% | 0% |
+| Structured events, no penalty | 0.113 (66%) | 0.120 (49%) | 0.07% | 0% |
+| Structured + calendar + butterfly | 0.111 (66%) | 0.124 (47%) | 0.02% | 0% |
+
+- The calendar penalty removes most calendar arbitrage at almost no cost to the fit.
+- The fitted surfaces had no butterfly arbitrage even without a penalty.
+- Neither the penalties nor the structured event model improved unseen expiries.
+- **Correction to iteration 2:** "fails on unseen expiries" was overstated. That came from holding out
+  one expiry per day, which on 2023-02-15 was the first expiry after a Fed meeting. With four expiries
+  held out, the error is 0.10 vol points, not 0.36. Weaker than on quotes, but not a failure.
+
+**Not done / caveats**
+- Penalty weights (100 and 10) were not tuned; calendar violations are reduced, not eliminated.
+- Arbitrage is checked on a grid inside the quoted strike range only, not in the far wings.
+- Three days, one seed. Expiries just after an event are probably still the weak spot; not tested.
+
 ## Iteration 2 - Fixing the stage 1 underfit  (branch `iteration-2`, 2026-11-11)
 
 **What we worked on:** why the first network lost to a polynomial, and what fixes it.

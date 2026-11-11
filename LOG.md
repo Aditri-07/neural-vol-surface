@@ -185,3 +185,49 @@ also run on three more days (04-19, 08-16, 12-06); six-day means are in
   and metrics were restored from history next to the iteration 2 ones.
 - `CHANGELOG.md` added: one entry per push. Snapshot branches `iteration-1` and `iteration-2` mark each state (tags could not be pushed from the Claude session).
 - Convention from here: each push gets a changelog entry, a snapshot branch, and its own results folder.
+
+## 2026-11-11 - Stage 2: no-arbitrage penalties (`volnn/surface.py`, `stage2_arbitrage.py`)
+
+**Math**
+- Total variance w(k, T) = sigma^2 * T.
+- Calendar: w must not fall as T rises at fixed k. Penalty = mean relative fall in w between
+  consecutive trading days, at random k. Enforced on every trading day 7-365 days ahead, listed or
+  not, because the model's time inputs depend only on dates.
+- Butterfly: g(k) = (1 - k w'/(2w))^2 - (w'^2/4)(1/w + 1/4) + w''/2 >= 0. Penalty = mean max(0, -g).
+  w' and w'' come from autograd.
+- Loss = mean(((sigma_hat - sigma_mid) / spread)^2) + 100 * calendar + 10 * butterfly.
+
+**Models**
+- Free: the stage 1 variant I network, written to output total variance directly.
+- Structured: w = smooth network in trading time + v_fomc * (FOMC count) + v_cpi * (CPI count).
+  Two learned event variances instead of free-form time features.
+
+**Test:** per day, hold out four whole expiries (20/40/60/80% along the curve) and a random 20% of
+the remaining quotes. Days: 2023-02-15, 06-21, 10-18. 4 x 128 network, 5,000 epochs.
+
+**Results:** table in CHANGELOG.md, iteration 3; files in `results/iteration-3-arbitrage/`.
+
+**Reading**
+- Calendar penalty: violations 2.9% -> 0.6% of the grid, worst single fall 7.4% -> 2.4%, fit unchanged.
+  Soft penalty with an untuned weight, so not zero.
+- Butterfly: no violations with or without the penalty (minimum g about 0.1). The raw mid quotes had
+  19-29% butterfly violations from tick rounding; the smooth network removes them by itself. The
+  penalty costs 2x training time and currently buys nothing inside the quoted strike range.
+- Unseen expiries: no variant helps. Hypothesis that the calendar penalty would fix them: rejected.
+  Hypothesis that structured event variance would generalise better: rejected; it fits quotes worse
+  (0.11 vs 0.06) because one flat variance number per event type is too crude. Learned event sizes were
+  about a 0.30% move for FOMC and 0.24% for CPI.
+- Correction: the iteration 2 conclusion that unseen expiries "fail" rested on one held-out expiry per
+  day and was too strong. See CHANGELOG.
+- A figure of day-by-day ATM variance growth was tried and dropped: violations are mostly away from
+  the money and the picture did not show the effect.
+
+## Where to pick up (replaces the lists above)
+
+1. `git pull`; run `python stage2_arbitrage.py` locally if you want to reproduce (about 15 minutes).
+2. Check the FOMC and CPI dates in `volnn/features.py` against the Fed and BLS calendars.
+3. Stage 3: one model across all 249 days with a latent state per day. This is the real test of
+   learning event effects, with thousands of expiries instead of ~38.
+4. Optional before stage 3: tune the calendar weight; test expiries just after events specifically;
+   check butterfly in the far wings.
+5. Housekeeping: OptionsDX licence terms; 2021-2022 data.
