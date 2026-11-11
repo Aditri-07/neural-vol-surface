@@ -106,3 +106,17 @@ Full table: `results/vetting_by_month.csv`.
 - Repo pushed to GitHub (private). Raw data stays local under `data/`, which Git ignores.
 - `vet_data.py` crashed with `KeyError: 'month'` when it found no data files. It now stops with a
   message saying where it looked. Cause on the local machine: folder named `Data`, script expects `data`.
+- Local run of `vet_data.py` on a MacBook reproduced every number in `results/vetting_by_month.csv`.
+  `stage1_fit_one_day.py` not yet run locally.
+
+## Where to pick up
+
+1. Run `python stage1_fit_one_day.py --date 2023-02-15` locally; try a few other dates.
+2. Fix the stage 1 underfit, one change at a time, recording the metrics after each:
+   a. weight the loss by inverse bid-ask width
+   b. fit total variance (iv^2 * T) instead of IV
+   c. handle event dates (per-expiry level offset or event feature)
+3. Evaluate across many days (e.g. 20 spread over 2023), not one.
+4. Target before stage 2: beat the per-expiry polynomial on held-out quotes and get most
+   predictions inside the bid-ask band.
+5. Housekeeping: read the OptionsDX licence terms; decide whether to buy/download 2021-2022.
