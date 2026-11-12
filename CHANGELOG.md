@@ -8,6 +8,49 @@ For the reasoning behind each decision, see [LOG.md](LOG.md).
 
 ---
 
+## Iteration 4 - One model for the whole year  (branch `iteration-4`, 2026-11-11)
+
+**What we worked on:** stage 3. A single network shared by every day of 2023, with a small learned
+vector ("latent state") per day, and a test on whole days the network never trained on.
+
+**Added**
+- `volnn/latent.py`: the auto-decoder model, mini-batch training with the calendar penalty, and
+  `encode_day`, which finds the latent vector for a new day with the network frozen.
+- `stage3_latent.py`: trains on 224 days, tests on 25 held-out days; `stage3_plot.py`: daily error figure.
+- `results/iteration-4-latent/`: results for latent sizes 4, 8 and 16, and a single-day baseline.
+
+**Found** (mean over days; RMSE in vol points, share inside bid-ask in brackets)
+
+| Model | Days | Held-out quotes | Held-out expiries | Calendar violations |
+|---|---|---|---|---|
+| Latent 4, training days | 224 | 0.211 (38%) | 0.175 (37%) | 0.7% |
+| Latent 4, unseen days | 25 | 0.223 (37%) | 0.181 (38%) | 0.6% |
+| Latent 8, training days | 224 | 0.157 (46%) | 0.143 (45%) | 1.0% |
+| Latent 8, unseen days | 25 | 0.163 (47%) | 0.138 (46%) | 0.9% |
+| Latent 16, training days | 224 | 0.144 (52%) | 0.136 (49%) | 0.7% |
+| Latent 16, unseen days | 25 | 0.151 (52%) | 0.144 (48%) | 0.8% |
+
+Same nine unseen days, shared model against a network fitted to each day separately:
+
+| Model | Held-out quotes | Held-out expiries | Calendar violations |
+|---|---|---|---|
+| Single-day network (stage 2, no penalty) | 0.079 (83%) | 0.161 (40%) | 3.3% |
+| Shared network, latent 16 | 0.144 (50%) | 0.125 (51%) | 0.8% |
+
+- The shared network works as well on days it never saw as on days it trained on.
+- It is looser than a per-day network on quotes, and better on expiries it has not seen. Its error
+  on unseen expiries is the same as on seen ones: the gap from iterations 2 and 3 is closed.
+- A linear combination of the 16 latent numbers explains 98% of the day-to-day variation in 30-day
+  ATM vol, 96% of 30-day skew and 89% of the term-structure slope.
+- **Correction to iteration 3:** the single-day unseen-expiry error of 0.10 came from three days. On
+  nine other days it is 0.16.
+
+**Not done / caveats**
+- One run per latent size, one seed, no tuning. Training loss was still falling at the end, so a
+  bigger network or longer training would probably tighten the fit; not tested.
+- Error is higher in January to March 2023 (up to about 0.3) than later in the year.
+- The latent coordinates are not individually interpretable; they are correlated with each other.
+
 ## Iteration 3 - No-arbitrage penalties  (branch `iteration-3`, 2026-11-11)
 
 **What we worked on:** stage 2. Adding calendar and butterfly conditions to the loss, and testing

@@ -231,3 +231,46 @@ the remaining quotes. Days: 2023-02-15, 06-21, 10-18. 4 x 128 network, 5,000 epo
 4. Optional before stage 3: tune the calendar weight; test expiries just after events specifically;
    check butterfly in the far wings.
 5. Housekeeping: OptionsDX licence terms; 2021-2022 data.
+
+## 2026-11-11 - Stage 3: one model for the year (`volnn/latent.py`, `stage3_latent.py`)
+
+**Model:** w(k, time, day) = w_scale * softplus(net([k/sqrt(T), sqrt(T), T_trading/T, n_fomc/T,
+n_cpi/T, z_day])). Network 4 x 128 shared by all days; z_day is a learned vector per day.
+
+**Why an auto-decoder and not an autoencoder:** an encoder needs every surface on a fixed grid, and
+quotes are irregular. Here each training day's z is a free parameter trained by backpropagation. For a
+new day the network is frozen and only z is optimised (300 Adam steps, starting from the mean z).
+
+**Training:** 786,762 quotes from 224 days (each day minus four held-out expiries and a random 20% of
+quotes). Mini-batches of 16,384, 8,000 steps, Adam with cosine decay. Loss = squared error in spread
+units + 100 * calendar penalty + 1e-4 * |z|^2. No butterfly penalty (stage 2 showed it was inactive).
+About 8 minutes on 2 cores.
+
+**Tests:** held-out quotes; four held-out expiries per day; 25 whole days (every tenth) never used to
+train the network, encoded afterwards from their own training quotes.
+
+**Results:** tables in CHANGELOG.md, iteration 4; files and figure in `results/iteration-4-latent/`.
+
+**Reading**
+- No gap between training days and unseen days: what the network learned transfers across days.
+- No gap between seen and unseen expiries, and unseen expiries beat the single-day network on the
+  same nine days (0.125 vs 0.161). Training across days is what helps unseen expiries; this is the
+  result stages 1 and 2 could not get.
+- The cost is a looser fit on quotes (0.144 vs 0.079): 16 numbers per day cannot describe a day as
+  tightly as a whole network fitted to it. Going from 8 to 16 latents helped only a little, and the
+  training loss was still falling, so the limit is probably network size and training length, not
+  latent size. Not tested.
+- Worst days are in January-March 2023 (higher vol, March bank stress).
+- Latents: individually not interpretable; jointly they span level, skew and slope (R^2 0.98, 0.96,
+  0.89 for latent 16).
+- Single run per setting, single seed. Latent 8 was trained with 2 threads and latents 4 and 16 with
+  1 thread each; this should only affect run time.
+
+## Where to pick up (replaces the lists above)
+
+1. `git pull`; `python stage3_latent.py --latent 16` to reproduce (10-15 minutes).
+2. Decide: tighten stage 3 first (hidden 256, 20,000+ steps), or go to stage 4 with the current model.
+3. Stage 4: forecast tomorrow's latent vector from past ones; benchmark is "tomorrow = today".
+   249 days is a short history for this; 2021-2022 data would help.
+4. Still open: FOMC/CPI dates unverified; OptionsDX licence unread; penalty weights untuned;
+   far-wing butterfly check; expiries just after events.
