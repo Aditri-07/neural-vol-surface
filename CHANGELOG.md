@@ -8,6 +8,47 @@ For the reasoning behind each decision, see [LOG.md](LOG.md).
 
 ---
 
+## Iteration 5 - Tightening the shared model  (branch `iteration-5`, 2026-11-13)
+
+**What we worked on:** how close the stage 3 shared network can get to a network fitted to each day
+separately, by changing only how it is trained.
+
+**Changed**
+- `stage3_latent.py`: defaults are now batch 4,096 and 32,000 steps; new `--batch` and `--load` options.
+- `volnn/latent.py`: `encode_day` (fitting the latent vector of an unseen day) uses L-BFGS instead of
+  300 Adam steps. The Adam version stopped short of the optimum and understated results on unseen days.
+- Model, loss and data are unchanged.
+
+**Added**
+- `results/iteration-5-tighter/`: four training set-ups, all scored the same way.
+
+**Found** (latent 16; mean over days; RMSE in vol points, share inside bid-ask in brackets)
+
+| Training set-up | Training days: quotes | Training days: expiries | Unseen days: quotes | Unseen days: expiries |
+|---|---|---|---|---|
+| A. Iteration 4: batch 16,384, 8,000 steps | 0.144 (52%) | 0.136 (49%) | 0.143 (55%) | 0.140 (49%) |
+| B. Same compute: batch 4,096, 32,000 steps | 0.089 (73%) | 0.094 (61%) | 0.098 (73%) | 0.095 (63%) |
+| C. B trained 2.5x longer: 80,000 steps | 0.053 (91%) | 0.075 (72%) | 0.083 (79%) | 0.082 (69%) |
+| D. B with a network twice as wide | 0.074 (79%) | 0.085 (67%) | 0.087 (76%) | 0.090 (66%) |
+
+Same nine unseen days, best shared model (C) against a network fitted to each day separately:
+
+| Model | Held-out quotes | Held-out expiries | Calendar violations |
+|---|---|---|---|
+| Single-day network | 0.079 (83%) | 0.161 (40%) | 3.3% |
+| Shared network C | 0.082 (78%) | 0.084 (70%) | 0.2% |
+
+- The iteration 4 model was undertrained. Four times as many, smaller updates at the same compute cut
+  the error by about a third; training longer cut it again.
+- The shared model now matches per-day networks on quotes and halves their error on unseen expiries.
+- With long training a gap opens between training days (0.053) and unseen days (0.083). Unseen days
+  still improved, so this is not yet harmful, but more training will not transfer one for one.
+
+**Not done / caveats**
+- One run per set-up, one seed. Wide and long together was not run. A's row differs slightly from
+  iteration 4's table because unseen days are now encoded with L-BFGS.
+- January to March 2023 is still the weakest quarter (0.11 on unseen days against about 0.07 later).
+
 ## Iteration 4 - One model for the whole year  (branch `iteration-4`, 2026-11-11)
 
 **What we worked on:** stage 3. A single network shared by every day of 2023, with a small learned

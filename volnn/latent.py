@@ -102,17 +102,25 @@ def fit_latent(model, k, time, iv, spread, day, grids, steps=8000, batch=16384, 
     return u_lo, u_hi
 
 
-def encode_day(model, k, time, iv, spread, z_init, steps=300, lr=0.05):
-    """Find the latent vector for one day with the network frozen. Returns a 1-D tensor."""
+def encode_day(model, k, time, iv, spread, z_init, max_iter=300):
+    """Find the latent vector for one day with the network frozen. Returns a tensor of shape [1, L].
+
+    Only `latent_dim` numbers are optimised and the whole day fits in one batch, so L-BFGS is used:
+    it converges in seconds. (300 Adam steps, used in iteration 4, stopped well short of the optimum.)
+    """
     z = z_init.clone().detach().requires_grad_(True)
-    opt = torch.optim.Adam([z], lr=lr)
     for p in model.parameters():
         p.requires_grad_(False)
-    for _ in range(steps):
+    opt = torch.optim.LBFGS([z], lr=1.0, max_iter=max_iter, history_size=20, line_search_fn="strong_wolfe",
+                            tolerance_grad=1e-9, tolerance_change=1e-12)
+
+    def closure():
         opt.zero_grad()
         loss = (((model.iv(k, time, z.expand(len(k), -1)) - iv) / spread) ** 2).mean()
         loss.backward()
-        opt.step()
+        return loss
+
+    opt.step(closure)
     for p in model.parameters():
         p.requires_grad_(True)
     return z.detach()

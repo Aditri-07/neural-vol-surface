@@ -274,3 +274,40 @@ train the network, encoded afterwards from their own training quotes.
    249 days is a short history for this; 2021-2022 data would help.
 4. Still open: FOMC/CPI dates unverified; OptionsDX licence unread; penalty weights untuned;
    far-wing butterfly check; expiries just after events.
+
+## 2026-11-13 - Tightening stage 3 (training only)
+
+**Question:** iteration 4's shared model was at 0.144 on held-out quotes against 0.079 for per-day
+networks, with training loss still falling. Is the limit capacity or training?
+
+**Runs** (latent 16, 4 x 128 unless stated; A is the iteration 4 model)
+- B: batch 4,096 x 32,000 steps. Same number of quote-passes as A, four times as many updates. 8 min.
+- C: batch 4,096 x 80,000 steps. About 38 min on one core.
+- D: hidden 256, batch 4,096 x 32,000 steps. About 35 min on one core.
+
+**Encoding fix:** unseen-day results for C first came out at 0.104, no better than B. Cause: `encode_day`
+ran 300 Adam steps and had not converged. 2,000 Adam steps gave 0.083; L-BFGS gives the same 0.083 in
+about half a second per day and does not improve with more iterations, so it is converged.
+`encode_day` now uses L-BFGS and all four models were re-scored with it.
+
+**Results:** tables in CHANGELOG.md, iteration 5; files in `results/iteration-5-tighter/`.
+
+**Reading**
+- The limit was training, not capacity: B beats A by a third at identical compute. Large batches
+  meant too few parameter updates.
+- Longer training (C) beats a wider network (D) at similar cost. Wide and long together: not run.
+- C's training days fit as tightly as per-day networks (0.053, 91% inside) and unseen days reach
+  0.083 (79%). The gap between the two is new: the network and the training days' latent vectors are
+  starting to fit each other in ways that do not transfer. More days of data is the natural remedy.
+- Final training loss in spread units: A 1.0, B 0.31, C about 0.10.
+- Latent-to-descriptor R^2 for C: 0.98 (30-day ATM), 0.96 (skew), 0.89 (term slope). Unchanged.
+- One run per set-up, one seed; differences of 0.005 between rows should not be read into.
+
+## Where to pick up (replaces the lists above)
+
+1. `git pull`; `python stage3_latent.py --steps 80000` reproduces model C (about 40 minutes).
+2. Stage 4: forecast tomorrow's latent vector from past ones, using model C's latents. Benchmark:
+   tomorrow = today. 249 days is a short history; 2021-2022 data would help here and with the
+   training-day / unseen-day gap.
+3. Still open: FOMC/CPI dates unverified; OptionsDX licence unread; penalty weights untuned;
+   far-wing butterfly check; expiries just after events; multiple seeds.

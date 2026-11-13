@@ -5,16 +5,16 @@ using real end-of-day option quotes. Classical models (per-expiry polynomial now
 are benchmarks, not the subject.
 
 **Status:** data pipeline and vetting done for 2023; stages 1 to 3 done. One network trained on 224
-days, with 16 learned numbers per day, reproduces a day's surface to about 0.15 vol points RMSE (about
-half of predictions inside the bid-ask band), on days it trained on and on 25 days it never saw. A
-network fitted to a single day is tighter on that day's quotes (0.08) but worse on expiries it has not
-seen (0.16 against 0.125). See [CHANGELOG.md](CHANGELOG.md) for what changed in each push and
-[LOG.md](LOG.md) for the reasoning.
+days, with 16 learned numbers per day, fits days it never trained on to about 0.08 vol points RMSE
+(about 79% of predictions inside the bid-ask band, 69% on expiries it has not seen). On the same nine
+unseen days it matches a network fitted to each day separately on quotes (0.082 against 0.079) and
+halves the error on unseen expiries (0.084 against 0.161). See [CHANGELOG.md](CHANGELOG.md) for what
+changed in each push and [LOG.md](LOG.md) for the reasoning.
 
 ## Plan
 1. Fit one day's surface with an MLP - *done*
 2. Add no-arbitrage penalties (calendar, butterfly) to the loss - *done; penalties not tuned*
-3. One model across all days via a latent state per day (auto-decoder) - *done; not tuned*
+3. One model across all days via a latent state per day (auto-decoder) - *done; lightly tuned*
 4. Forecast next-day surfaces; test against carry-forward and parametric fits
 5. Optional: uncertainty bands (ensembles / MC dropout)
 
@@ -30,7 +30,7 @@ python vet_data.py data/spx_2023q1 data/spx_2023q2 data/spx_2023q3 data/spx_2023
 python stage1_fit_one_day.py --data data/spx_2023q1 --date 2023-02-15
 python stage1_ablation.py            # all model variants on six days; slow (about an hour on 2 cores)
 python stage2_arbitrage.py           # no-arbitrage penalties on three days (about 15 minutes on 2 cores)
-python stage3_latent.py --latent 16  # one model for the year (about 10-15 minutes on 2 cores)
+python stage3_latent.py --steps 80000  # one model for the year (about 40 minutes on 2 cores; default 32000 steps takes 10)
 python stage3_plot.py stage3_latent16_by_day.csv
 ```
 
@@ -47,7 +47,7 @@ python stage3_plot.py stage3_latent16_by_day.csv
 | `stage2_arbitrage.py` | Stage 2 experiment: penalties and a structured event model, four held-out expiries per day |
 | `volnn/latent.py` | Stage 3 auto-decoder: shared network plus a latent vector per day; encoding of unseen days |
 | `stage3_latent.py`, `stage3_plot.py` | Stage 3 experiment across all of 2023, and its figure |
-| `results/` | Outputs kept per iteration: `data-vetting/`, `iteration-1-baseline/`, `iteration-2-ablation/`, `iteration-3-arbitrage/`, `iteration-4-latent/` |
+| `results/` | Outputs kept per iteration: `data-vetting/`, `iteration-1-baseline/`, `iteration-2-ablation/`, `iteration-3-arbitrage/`, `iteration-4-latent/`, `iteration-5-tighter/` |
 | `CHANGELOG.md` | What changed in each push |
 | `LOG.md` | Dated log of decisions, results and open issues |
 

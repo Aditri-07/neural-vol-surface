@@ -9,7 +9,7 @@ Three out-of-sample tests:
 
 Usage:
     python vet_data.py                       (once, writes quotes_clean.pkl)
-    python stage3_latent.py --latent 8
+    python stage3_latent.py --latent 16 --batch 4096 --steps 80000      (about 40 minutes on 2 cores)
 """
 import argparse
 import time as clock
@@ -55,11 +55,13 @@ def surface_descriptors(day: pd.DataFrame) -> dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--quotes", default="quotes_clean.pkl")
-    ap.add_argument("--latent", type=int, default=8)
-    ap.add_argument("--steps", type=int, default=8000)
+    ap.add_argument("--latent", type=int, default=16)
+    ap.add_argument("--steps", type=int, default=32000)
     ap.add_argument("--hidden", type=int, default=128)
+    ap.add_argument("--batch", type=int, default=4096)
     ap.add_argument("--lam_cal", type=float, default=100.0)
     ap.add_argument("--threads", type=int, default=2)
+    ap.add_argument("--load", default=None, help="skip training and evaluate a saved model (.pt)")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
     out = args.out or f"stage3_latent{args.latent}"
@@ -86,10 +88,15 @@ def main():
     print(f"{len(tr):,} training quotes")
 
     model = LatentSurface(len(train_dates), args.latent, args.hidden)
-    t0 = clock.time()
-    u_lo, u_hi = fit_latent(model, k, time, iv, spread, day, grid_t, steps=args.steps, lam_cal=args.lam_cal)
-    train_minutes = (clock.time() - t0) / 60
-    print(f"trained in {train_minutes:.1f} minutes")
+    if args.load:
+        model.load_state_dict(torch.load(args.load))
+        u = k / torch.sqrt(time[:, 0])
+        u_lo, u_hi = torch.quantile(u[::50], 0.005).item(), torch.quantile(u[::50], 0.995).item()
+    else:
+        t0 = clock.time()
+        u_lo, u_hi = fit_latent(model, k, time, iv, spread, day, grid_t, steps=args.steps, batch=args.batch,
+                                lam_cal=args.lam_cal, log_every=max(args.steps // 8, 1))
+        print(f"trained in {(clock.time() - t0) / 60:.1f} minutes")
 
     rows = []
     z_mean = model.z.weight.detach().mean(0, keepdim=True)
@@ -112,7 +119,8 @@ def main():
 
     res = pd.DataFrame(rows)
     res.to_csv(f"{out}_by_day.csv", index=False)
-    torch.save(model.state_dict(), f"{out}_model.pt")
+    if not args.load:
+        torch.save(model.state_dict(), f"{out}_model.pt")
     cols = ["val_rmse", "val_inside", "exp_rmse", "exp_inside", "calendar_viol_pct"]
     summary = res.groupby("kind")[cols].mean().assign(days=res.groupby("kind").size())
     summary.to_csv(f"{out}_summary.csv")
